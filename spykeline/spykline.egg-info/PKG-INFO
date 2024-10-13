@@ -1,0 +1,34 @@
+Metadata-Version: 2.1
+Name: spykline
+Version: 0.1.0
+Summary: Spike sorting pipeline.
+Home-page: https://github.com/yourusername/spykline
+Author: PERON Olivier
+Author-email: olivier.peron@inserm.fr
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
+Requires-Dist: cuda-python==12.5.0
+Requires-Dist: docker==7.1.0
+Requires-Dist: matplotlib==3.9.1
+Requires-Dist: neo==0.13.0
+Requires-Dist: numba==0.60.0
+Requires-Dist: numpy==1.26.1
+Requires-Dist: pandas==2.2.2
+Requires-Dist: pillow==10.4.0
+Requires-Dist: probeinterface==0.2.21
+Requires-Dist: Rtree==1.3.0
+Requires-Dist: scikit-learn==1.5.1
+Requires-Dist: scipy==1.13.1
+Requires-Dist: spikeinterface==0.101.0rc0
+Requires-Dist: spyder==5.5.5
+
+# Spykeline
+Spike sorting pipeline 
+
+
+%% Installation 
+
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121

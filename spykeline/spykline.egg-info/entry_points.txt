@@ -1,0 +1,2 @@
+[console_scripts]
+run_spykline = spykline.run_spyKline:main
