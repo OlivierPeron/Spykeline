@@ -5,7 +5,7 @@ import shutil
 
 from . import set_spykeparams
 from .GUI import SpykelineGUI
-from .tools import define_paths, load_data, phy_export, klusters_export, convert_json_compatible, open_sorting
+from .tools import define_paths, load_data, convert_json_compatible, open_sorting, export_results
 from .preprocessing.preprocess import run_preprocessing
 from .spikesorting.sorting import run_sorting
 from .curation.curate import run_curation
@@ -76,29 +76,8 @@ def run_spykeline(input_path, secondary_path, spykeparams, probe_dict):
     with open(os.path.join(paths['output_folder'], 'spykeparams.json'), 'w') as f:
         json.dump(spykeparams, f, default=convert_json_compatible)
 
-    # Exporting to phy
-    if spykeparams['general']['export_to_phy']:
-        if spykeparams['general']['pipeline'] == 'all':
-            phy_export(data,
-                       paths,
-                       units)
-        else:
-            for probe_id, _ in probe_dict.items():
-                phy_export(data[probe_id],
-                        paths[f'Probe_{probe_id}'],
-                        units[probe_id])
-                
-    # Exporting to klusters
-    if spykeparams['general']['export_to_klusters']:
-        if spykeparams['general']['pipeline'] == 'all':
-            klusters_export(data,
-                            paths,
-                            units)
-        else:
-            for probe_id, _ in probe_dict.items():
-                klusters_export(data[probe_id],
-                                paths[f'Probe_{probe_id}'],
-                                units[probe_id])
+    # Exporting the results
+    export_results(curated_data, paths, units, metadata)
 
     # Cleaning the tmp folder
     try:
