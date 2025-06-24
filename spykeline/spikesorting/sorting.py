@@ -39,7 +39,7 @@ def run_sorting(recordings, paths, metadata):
         # requirements = ["numpy==1.26.1"]
 
     if spykeparams['spikesorting']['pipeline'] == 'all':
-        merged_recording = si.aggregate_channels(recordings)
+        rec = recordings[0]
 
         if sorter_name in ['spykingcircus2', 'tridesclous2']:
                 full_time = rec.get_duration()
@@ -47,7 +47,7 @@ def run_sorting(recordings, paths, metadata):
                 sorter_dict[sorter_name]['params']['selection']['min_n_peaks'] = int(0.02 * full_time)
 
         sorting = ss.run_sorter(sorter_name,
-                                merged_recording,
+                                rec,
                                 paths['output_folder'],
                                 docker_image=image,
                                 verbose=True,
@@ -55,9 +55,9 @@ def run_sorting(recordings, paths, metadata):
         
         if spykeparams['general']['do_curation'] or spykeparams['general']['export_to_phy'] or spykeparams['general']['export_to_klusters']:
                 final_recording, final_sorting, sorting_analyzer = exporter(None, 
-                                                                            merged_recording,
+                                                                            rec,
                                                                             sorting,
-                                                                            paths[f'Probe_{id}'],
+                                                                            paths,
                                                                             metadata)
         else: 
             sorting_analyzer = None
