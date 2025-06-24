@@ -1,8 +1,7 @@
-import pandas as pd
+from probeinterface import ProbeGroup, generate_multi_shank, generate_tetrode, get_probe
+from probeinterface.plotting import plot_probegroup
 
-from probeinterface import Probe, ProbeGroup, generate_multi_shank, generate_tetrode, get_probe
-
-from .. import spykeparams
+import numpy as np
 from ..config import home_probes
 
 def create_probe(metadata) -> ProbeGroup:
@@ -17,66 +16,171 @@ def create_probe(metadata) -> ProbeGroup:
     probegroup : ProbeGroup
         The final ensemble of probes that were used to record.
     """
-
-    assert len(metadata['Anatomical_groups']) == len(metadata['Probes'])
+    from .. import spykeparams
 
     probegroup = ProbeGroup()
+    shanks_groups = []
 
-    for probe_index, probe_info in enumerate(metadata['Probes']):
-        brand, model = probe_info.split('_')
-        probe_ids = metadata['Anatomical_groups'][probe_index]
+    sh_offset = 0
+    ch_offset = 0
+    probe_id = 0
 
-        shanks_for_probe = [shank for shank in metadata['Shanks_groups'] if any(electrode in probe_ids for electrode in shank)]
+    new_probe_dict = {}
 
-        if model in home_probes:
+    for group_id, probe_info in metadata['Probes'].items():
+        brand = probe_info['Brand']
+        model = probe_info['Model']
 
+        group_id = int(group_id)
+
+        probe_ch = metadata['Anatomical_groups'][group_id]
+
+        if model in home_probes.keys(): # HOME PROBES
             if model == 'Tetrode':
-                probe = generate_tetrode()
-                probe.move([2800 * probe_index, 0])
+                nb_shanks = len(probe_ch) // 4
+                if nb_shanks > 1:
+                    for tetrode_id in range(nb_shanks):
+                        # Handle metadata
+                        ## Shanks
+                        shanks = home_probes[model]['shanks']
+                        shanks_groups.append([x + sh_offset + tetrode_id for x in shanks])
+                        ## Channel map
+                        probe_map = [x + ch_offset + 4*tetrode_id for x in home_probes[model]['map']]
 
-            else :
-                if spykeparams['spikesorting']['sorter'] == 'kilosort4': # Kilosort4 needs the probes to be on top of each other, instead than next to each other
-                    probe = Probe(ndim=2, si_units='um')
-                    positions = []
-                    contact_ids = []
-                    
-                    for shank_index, shank in enumerate(shanks_for_probe):
-                        for rank, electrode in enumerate(shank):
-                            contact_ids.append(electrode)
-                            positions.append((2800 * probe_index + 40 * (rank % 2),
-                                              200 * shank_index + 20 * rank))
-                            
-                    probe.set_contacts(positions)
-                    probe.set_device_channel_indices(contact_ids)
-                    
-                    df = pd.DataFrame(positions)
-                    xmin, xmax = df[0].min(), df[0].max()
-                    ymin, ymax = df[1].min(), df[1].max()
-                    
-                    polygon = [(xmin - 20, ymax + 20),              # Upper left corner
-                               (xmin - 20, ymin - 20),              # Lower left corner
-                               ((xmax + xmin) / 2, ymin - 100),     # Lower center tip
-                               (xmax + 20, ymin - 20),              # Lower right corner
-                               (xmax + 20, ymax + 20)]              # Upper right corner
-                    
-                    probe.set_planar_contour(polygon)
-                    
+                        # Create the probe
+                        probe = generate_tetrode()
+                        probe.move([2800 *(probe_id + tetrode_id), 0])
+                        probe.set_device_channel_indices(probe_ch[tetrode_id*4:(tetrode_id+1)*4])
+                        probegroup.add_probe(probe)
+
+                        new_probe_dict[probe_id] = {
+                            'Brand': brand,
+                            'Model': model,
+                            'Architecture': 'Default'
+                        }
+
+                        probe_id += 1
                 else:
-                    probe = generate_multi_shank(num_shank=len(shanks_for_probe),
-                                                       num_columns=2,
-                                                       num_contact_per_column=len(shanks_for_probe[0]) // 2,
-                                                       xpitch=20,
-                                                       ypitch=20,
-                                                       y_shift_per_column=[-10, 0])
+                    # Handle metadata
+                    ## Shanks
+                    shanks = home_probes[model]['shanks']
+                    shanks_groups.append([x + sh_offset  for x in shanks])
+                    ## Channel map
+                    probe_map = [x + ch_offset for x in home_probes[model]['map']]
 
-                    probe.move([2800 * probe_index, 0])
+                    # Create the probe
+                    probe = generate_tetrode()
+                    probe.move([2800 * probe_id, 0])
+                    probe.set_device_channel_indices(probe_ch)
+                    probegroup.add_probe(probe)
+                    new_probe_dict[probe_id] = {
+                            'Brand': brand,
+                            'Model': model,
+                            'Architecture': 'Default'
+                        }
+                    probe_id += 1
+            else :
+                # Handle metadata
+                ## Shanks
+                shanks = home_probes[model]['shanks']
+                nb_shanks = len(set(shanks))
+                shanks_groups.append([x + sh_offset for x in shanks])
+                ## Channel map
+                probe_map = [x + ch_offset for x in home_probes[model]['map']]
+                
+                assert sorted(probe_map) == sorted(probe_ch), f"Probe {probe_id} channel map does not match the probe map. Please check the metadata."
+
+                # Create the probe
+                probe = generate_multi_shank(num_shank=nb_shanks,
+                                             num_columns=2,
+                                             num_contact_per_column= 4,
+                                             xpitch=20,
+                                             ypitch=20,
+                                             y_shift_per_column=[-10, 0])
+
+                probe.move([2800 * probe_id, 0])
+                probe.set_device_channel_indices(probe_ch)
+                probegroup.add_probe(probe)
+                metadata['Probes'][probe_id]['Architecture'] = 'Default'
+
+                if shanks.count(0)//2 >= 6:
+                    new_probe_dict[probe_id] = {
+                            'Brand': brand,
+                            'Model': model,
+                            'Architecture': 'Linear'
+                        }
+                else:
+                    new_probe_dict[probe_id] = {
+                            'Brand': brand,
+                            'Model': model,
+                            'Architecture': 'Default'
+                        }
+
+                probe_id += 1
         else:
+            # Create the probe
             probe = get_probe(manufacturer=brand,
                               probe_name=model)
-            probe.move([2800 * probe_index, 0])
-            
-        contact_ids = [channel for grp in shanks_for_probe for channel in grp]
-        probe.set_device_channel_indices(contact_ids)
-        probegroup.add_probe()
 
-    return probegroup
+            if len(probe_ch) == 32:
+                headstage = 'RHD2132'
+            elif len(probe_ch) == 64:
+                headstage = 'RHD2164'
+            else:
+                raise ValueError(f"Probe {probe_id} has an unknown number of channels. Update the script for this new case.")
+            
+            from probeinterface.wiring import get_available_pathways
+            pathways = get_available_pathways()
+            connector = None
+            for pathway in pathways:
+                con, _ = pathway.split('>')
+                if con in model:
+                    connector = con
+                    break
+            
+            if connector is None:
+                raise ValueError(f"Probe {probe_id} has an unknown connector. Update the script for this new case.")
+            
+            wiring = f"{connector}>{headstage}"
+
+            assert wiring in pathways, f"Probe {probe_id} has an unknown wiring. Update the script for this new case by adding your probe in home_probes."
+
+            probe.wiring_to_device(wiring)
+            
+            probe.move([2800 * probe_id, 0])
+
+            probe.set_device_channel_indices(probe_ch)
+            probegroup.add_probe(probe)
+
+            if shanks.count(0)//2 >= 6:
+                new_probe_dict[probe_id] = {
+                        'Brand': brand,
+                        'Model': model,
+                        'Architecture': 'Linear'
+                    }
+            else:
+                new_probe_dict[probe_id] = {
+                        'Brand': brand,
+                        'Model': model,
+                        'Architecture': 'Default'
+                    }
+
+            probe_id += 1
+
+            ## Shanks
+            shanks = [x + ch_offset for x in probe.shank_ids.astype(int).tolist()]
+            nb_shanks = len(set(shanks))
+            shanks_groups.append([x + sh_offset for x in shanks])
+            ## Channel map
+            probe_map = probe.device_channel_indices.tolist()
+
+        sh_offset += nb_shanks
+        ch_offset += len(probe_map)
+
+    # Plot probe
+    if spykeparams["general"]["plot_probe"]:
+        plot_probegroup(probegroup, same_axes = False, with_device_index=True)
+
+    metadata['Probes'] = new_probe_dict
+
+    return probegroup, shanks_groups, metadata

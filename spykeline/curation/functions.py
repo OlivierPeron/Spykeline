@@ -3,10 +3,9 @@ from scipy.stats import pearsonr
 from collections import defaultdict
 from typing import List, Tuple, Dict, Optional
 
-from .. import spykeparams
+
 from ..config import op
 from ..curation.unit import Unit
-
 
 def _find_zero_cross_ids(data) -> List[int]:
     '''
@@ -152,30 +151,6 @@ def find_last_unique_one(arr) -> Optional[int]:
         
     return None
 
-def find_shank(channel: str, shanks: List[List[str]]) -> Optional[int]:
-    '''
-    Find the shank index for a given channel.
-
-    Parameters
-    ----------
-    channel : str
-        The channel identifier.
-    shanks : List[List[str]]
-        A list of shanks, each containing a list of channel identifiers.
-
-    Returns
-    -------
-    Optional[int]
-        The shank index, or None if the channel is not found.
-    '''
-    try:
-        for i, shank in enumerate(shanks):
-            if channel in shank:
-                return i
-    except Exception as e:
-        print(f"Error finding shank: {e}")
-    return None
-
 def split_unit(u_id: int, units: Dict[int, Unit], cs) -> Dict[int, Unit]:
     """
     Split a unit into multiple units based on its label.
@@ -194,6 +169,8 @@ def split_unit(u_id: int, units: Dict[int, Unit], cs) -> Dict[int, Unit]:
     Dict[int, Unit]
         The updated dictionary of Unit objects.
     """
+    from .. import spykeparams
+
     if units[u_id].label in ['raw', 'clean']:
         return units
     
@@ -214,7 +191,8 @@ def split_unit(u_id: int, units: Dict[int, Unit], cs) -> Dict[int, Unit]:
         units[childs[0]] = Unit(childs[0], 
                                 len([v for v in indices_list[0] if v == 0]), 
                                 units[u_id].main_ch, 
-                                units[u_id].shank,
+                                units[u_id].group,
+                                units[u_id].probe,
                                 mother = u_id)
         
         units[childs[0]].labelize('good')
@@ -223,7 +201,8 @@ def split_unit(u_id: int, units: Dict[int, Unit], cs) -> Dict[int, Unit]:
             units[childs[-1]] = Unit(childs[-1], 
                                      len(units[u_id].remove), 
                                      units[u_id].main_ch,
-                                     units[u_id].shank,
+                                     units[u_id].group,
+                                     units[u_id].probe,
                                      mother = u_id)
             units[childs[-1]].labelize('trash')
 
@@ -231,7 +210,8 @@ def split_unit(u_id: int, units: Dict[int, Unit], cs) -> Dict[int, Unit]:
                 units[childs[i]] = Unit(childs[i], 
                                         len([v for v in indices_list[0] if v == i]), 
                                         units[u_id].main_ch, 
-                                        units[u_id].shank, 
+                                        units[u_id].group, 
+                                        units[u_id].probe,
                                         mother = u_id)
                 units[childs[i]].labelize('child')
         else:
@@ -239,7 +219,8 @@ def split_unit(u_id: int, units: Dict[int, Unit], cs) -> Dict[int, Unit]:
                 units[childs[i]] = Unit(childs[i],
                                         len([v for v in indices_list[0] if v == i]), 
                                         units[u_id].main_ch, 
-                                        units[u_id].shank, 
+                                        units[u_id].group,
+                                        units[u_id].probe, 
                                         mother = u_id)
                 units[childs[i]].labelize('child')
         del units[u_id]
@@ -252,17 +233,19 @@ def split_unit(u_id: int, units: Dict[int, Unit], cs) -> Dict[int, Unit]:
             units[childs[0]] = Unit(childs[0],
                                     len([v for v in indices_list[0] if v == 0]),
                                     units[u_id].main_ch,
-                                    units[u_id].shank,
+                                    units[u_id].group,
+                                    units[u_id].probe,
                                     mother = u_id)
             units[childs[0]].labelize('good')
 
             units[childs[1]] = Unit(childs[1],
                                     len([v for v in indices_list[0] if v == 1]),
                                     units[u_id].main_ch,
-                                    units[u_id].shank,
+                                    units[u_id].group,
+                                    units[u_id].probe,
                                     mother = u_id)
             units[childs[1]].labelize('trash')
         
         del units[u_id]
 
-    return units
+    return units, cs

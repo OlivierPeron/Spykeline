@@ -1,14 +1,12 @@
 import os
-from pathlib import Path
 
 import spikeinterface as si
 import spikeinterface.preprocessing as spre
-from probeinterface.plotting import plot_probe_group
 
-from .. import spykeparams
-from ..config import op, job_kwargs
+from collections import Counter, defaultdict
 
 from .probe import create_probe
+from ..tools import rename_annot
 
 def apply_filter(recording):
     """
@@ -17,6 +15,8 @@ def apply_filter(recording):
         - lowpass filter
         - highpass filter
     """
+    from .. import spykeparams
+
     filter_params = spykeparams['preprocessing']['filter']
     if filter_params['freq_max'] is None:
         btype = "highpass"
@@ -32,8 +32,7 @@ def apply_filter(recording):
 
     return recording_filtered
 
-
-def apply_common_ref(recording, metadata):
+def apply_common_ref(recording, channel_groups = None):
     """
     Apply a common reference to a recording. This common reference can be a channel, an average, or a median of the channels.
 
@@ -49,19 +48,29 @@ def apply_common_ref(recording, metadata):
     recording_cr : recording
         Recording to which the common reference has been applied.
     """
-    channel_groups = [[eval(j) for j in grp] for grp in metadata['Shanks_groups']]
+    from .. import spykeparams
 
-    recording_cr = spre.common_reference(recording,
-                                         reference='global',
-                                         method=spykeparams['preprocessing']['common_reference']['method'],
-                                         groups=channel_groups)
-    
+    if channel_groups is None: # Applying CMR per radius
+        recording_cr = spre.common_reference(recording,
+                                             reference='local',
+                                             operator=spykeparams['preprocessing']['common_reference']['method'],
+                                             local_radius= (22, 55))
+    else: # Default, applying CMR per shank
+        recording_cr = spre.common_reference(recording,
+                                             reference='global',
+                                             operator=spykeparams['preprocessing']['common_reference']['method'],
+                                             groups=channel_groups)
+        
     return recording_cr
-
 
 def run_preprocessing(recording, paths, metadata):
     """
-    Preprocess the recording based on the defined Spykeline parameters.
+    Preprocess the recording :
+        - Apply a filter
+        - Split the recording by probe
+        - Discard the disconnected channels
+        - Apply a common median reference (by shank or by radius if linear)
+        - Whiten the probe recording
 
     Parameters
     ----------
@@ -74,37 +83,107 @@ def run_preprocessing(recording, paths, metadata):
 
     Returns
     -------
-    recording_loaded : recording
-        Fully preprocessed recording.
+    recordings : list
+        List of fully preprocessed recordings.
     """
-    pp_folder = os.path.join(paths['working_folder'], 'Preprocessed')
+    print("Preprocessing the recording...")
+    from .. import spykeparams
 
-    if Path(pp_folder).is_dir():
-        recording_loaded = si.load_extractor(pp_folder)
+    # Discard channels
+    if Counter(spykeparams["general"]["discard_channels"]) == Counter(metadata["Disconected"]):
+        all_ch_disc = metadata["Disconected"]
     else:
-        recording_filtered = apply_filter(recording)
-        recording_cmr = apply_common_ref(recording_filtered, metadata)
-        
-        # Create the recording's probes
-        probegroup = create_probe(metadata)
+        all_ch_disc = spykeparams["general"]["discard_channels"]
+    
+    # Apply the initial filter
+    recording_filtered = apply_filter(recording)
 
-        probegroup.set_global_device_channel_indices([channel for grp in metadata['Shanks_groups'] for channel in grp])
+    probegroup, shanks_groups, metadata = create_probe(metadata)
 
-        # Check that the channel_ids are correct
-        channel_ids = recording_cmr.get_channel_ids()
-        channel_model = op.arange(0, metadata['nb_channels'], 1) 
-        assert all(channel_ids[c] == channel_model[c] for c in channel_model), "Something is wrong with the way your channels are defined ..."
+    grouped = defaultdict(list)
+    for row_keys, row_vals in zip(shanks_groups, metadata["Anatomical_groups"]):
+        for k, v in zip(row_keys, row_vals):
+            grouped[k].append(v)
 
-        recording_final = recording_cmr.set_probegroup(probegroup)
+    metadata["Shanks_groups"] = [grouped[k] for k in grouped.keys()]
 
-        if spykeparams['general']['plot_probe']:
-            plot_probe_group(recording_final.get_probegroup(), with_device_index=True)
+    rec_probe = recording_filtered.set_probegroup(probegroup)
 
-        if spykeparams['general']['save_dat']:
+    if spykeparams['spikesorting']['pipeline'] == 'all':
+        ch_keep = [ch for ch in rec_probe.get_channel_ids() if not ch in all_ch_disc]
+        ch_disc = [ch for ch in rec_probe.get_channel_ids() if ch in all_ch_disc]
+        if all(ch in ch_disc for ch in rec_probe.get_channel_ids()):
+            raise ValueError("All the recording's channels are dicarded.")
+
+        rec = rec_probe.select_channels(ch_keep)
+
+        rec_cmr = apply_common_ref(rec, metadata["Shanks_groups"])
+
+        # Apply whitening
+        if spykeparams["preprocessing"]["whiten"]:
+            rec_preprocessed = spre.whiten(rec_cmr, int_scale=1000)
+        else:
+            rec_preprocessed = rec_cmr
+
+        rec_preprocessed.set_property("shank", [channel for probe in shanks_groups for channel in probe])
+
+        if spykeparams["general"]["save_dat"]:
+            pp_folder = paths['preprocessing']
             os.makedirs(pp_folder, exist_ok=True)
-            si.write_binary_recording(recording = recording_final, 
-                                      file_paths = os.path.join(pp_folder, 'preprocessed_rec.dat'),
-                                      dtype = 'uin16',
-                                      **job_kwargs)
+            si.write_binary_recording(
+                recording=rec_preprocessed,
+                file_paths=os.path.join(pp_folder, "preprocessed_rec.dat"),
+                dtype="uint16",
+                verbose=True
+            )
 
-    return recording_final
+        print("Preprocessing done!")
+
+        return [rec_preprocessed]
+    else:
+        recordings = rec_probe.split_by('group', 'list')
+
+        preprocessed_recordings = []
+
+        for id, rec in enumerate(recordings):
+            ch_keep = [ch for ch in rec.get_channel_ids() if not ch in all_ch_disc]
+            ch_disc = [ch for ch in rec.get_channel_ids() if ch in all_ch_disc]
+            if all(ch in ch_disc for ch in rec.get_channel_ids()):
+                print(f"skipping probe {id}, as all its channels are to be discarded")
+                continue
+            
+            rec = rec.select_channels(ch_keep)
+            
+            # Apply Common Reference
+            if metadata['Probes'][id]['Architecture'] == 'Linear':
+                rec_cmr = apply_common_ref(rec)
+            else:
+                shanks = [shank for shank in metadata["Shanks_groups"] if any(electrode in rec.get_channel_ids() for electrode in shank)]
+                rec_cmr = apply_common_ref(rec, shanks)
+
+            # Apply whitening
+            if spykeparams["preprocessing"]["whiten"]:
+                rec_preprocessed = spre.whiten(rec_cmr, int_scale=1000)
+            else:
+                rec_preprocessed = rec_cmr
+
+            rec_preprocessed.set_property("shank", shanks_groups[id])
+
+            rec_renamed = rename_annot(rec_preprocessed)
+
+            preprocessed_recordings.append(rec_renamed)
+
+        # Save the processed recording
+        if spykeparams["general"]["save_dat"]:
+            pp_folder = paths[f'Probe_{id}']['preprocessing']
+            os.makedirs(pp_folder, exist_ok=True)
+            si.write_binary_recording(
+                recording=rec_renamed,
+                file_paths=os.path.join(pp_folder, "preprocessed_rec.dat"),
+                dtype="uint16",
+                verbose=True
+            )
+
+        print("Preprocessing done!")
+
+        return preprocessed_recordings

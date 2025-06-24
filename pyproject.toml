@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spykeline"
+version = "0.1.0"
+description = "Spike sorting pipeline."
+readme = { file = "README.md", content-type = "text/markdown" }
+authors = [
+    { name = "PERON Olivier", email = "olivier.peron@inserm.fr" }
+]
+license = { file = "LICENSE" }
+keywords = ["spike sorting", "neuroscience", "pipeline"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent"
+]
+requires-python = ">=3.6"
+
+dependencies = [
+    "docker==7.1.0",
+    "matplotlib>=3.9.1",
+    "neo>=0.13.0",
+    "numba>=0.60.0",
+    "numpy==1.26.1",
+    "pandas>=2.2.2",
+    "pillow>=10.4.0",
+    "probeinterface>=0.2.21",
+    "Rtree>=1.3.0",
+    "scikit-learn>=1.5.1",
+    "scipy>=1.13.1",
+    "spikeinterface==0.102.2",
+    "cuda-python>=12.5.0",
+    "networkx>=2.0",
+    "PyWavelets>=1.1.1",
+    "tifffile>=2019.7.26",
+    "pure-eval",
+    "google-auth<3,>=1.6.3",
+    "grpcio>=1.24.3",
+    "protobuf>=3.6.0",
+    "tensorboard-data-server<0.7.0",
+    "tensorboard-plugin-wit>=1.6.0",
+    "werkzeug>=0.11.15",
+    "requests-oauthlib>=0.7.0",
+    "hdbscan>=0.8.27",
+    "pynvml>=12.0.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/GirardeauLab/Spykeline"
+
+[project.scripts]
+run_spykeline = "spykeline.run_spykeline:main"
+
+[tool.setuptools.package-data]
+spykeline = ["docs/*"]

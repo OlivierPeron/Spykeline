@@ -2,9 +2,11 @@ import os
 import spikeinterface.core as si
 import spikeinterface.extractors as se 
 
+import numpy as np
+
 sorter_dict = {
     'kilosort2_5' : {'surname' : "KS25",
-                     'docker_image' : None,  # "spikeinterface/kilosort2_5-compiled-base:latest",
+                     'docker_image' : "spikeinterface/kilosort2_5-compiled-base:latest",
                      'params' : {
                                 'detect_threshold': 6,
                                 'projection_threshold': [10, 4],
@@ -19,11 +21,13 @@ sorter_dict = {
                                 'nPCs': 3,
                                 'ntbuff': 64,
                                 'nfilt_factor': 4,
-                                'NT': None,
+                                'NT': None, # None for automatic, else 
                                 'do_correction': True,
                                 'wave_length': 61,
                                 'keep_good_only': False,
-                                'lam' : 15
+                                'lam' : 15,
+                                'skip_kilosort_preprocessing': True,
+                                "scaleproc": 200,
                                 },
                      'extractor' : se.KiloSortSortingExtractor,
                      'path' : 'sorter_output'
@@ -51,24 +55,53 @@ sorter_dict = {
                                'keep_good_only': False
                                },
                    'extractor' : se.KiloSortSortingExtractor,
-                    'path' : 'sorter_output'
+                   'path' : 'sorter_output'
                    },
     
     'kilosort4' : {'surname' : "KS4",
                    'docker_image' : "spikeinterface/kilosort3-compiled-base:latest",
                    'params' : {
-                               'Th_universal': 9,
-                               'Th_learned': 8,
-                               'do_CAR': False,
-                               'nearest_chans': 3,
-                               'whitening_range': None,  # Nb of neighbor channels to use for whitening, default 32.
-                               'nt0min': 30,
-                               'n_pcs': 6,  # Here, pcs must be 4 for tetrodes and 8 for probes (if by shank, else 32 or 64 depending of the probe)
-                               'do_correction' : False,  # Whether or not to perform drift correction
-                               'skip_kilosort_preprocessing': True,  # opposite of do_CAR 
-                               },
+                        "fs": 20000,
+                        "batch_size": 60000,
+                        "nblocks": 1,
+                        "Th_universal": 9,
+                        "Th_learned": 8,
+                        "nt": 61,
+                        "shift": None,
+                        "scale": None,
+                        "artifact_threshold": np.inf,
+                        "nskip": 25,
+                        "whitening_range": 32,
+                        "highpass_cutoff": 300,
+                        "binning_depth": 5,
+                        "sig_interp": 20,
+                        "drift_smoothing": [
+                            0.5,
+                            0.5,
+                            0.5
+                        ],
+                        "nt0min": None,
+                        "dmin": None,
+                        "dminx": 20,
+                        "min_template_size": 10,
+                        "template_sizes": 5,
+                        "nearest_chans": 10,
+                        "nearest_templates": 100,
+                        "max_channel_distance": 32,
+                        "max_peels": 100,
+                        "templates_from_data": True,
+                        "n_templates": 6,
+                        "n_pcs": 6,
+                        "Th_single_ch": 6,
+                        "acg_threshold": 0.2,
+                        "ccg_threshold": 0.25,
+                        "cluster_downsampling": 20,
+                        "x_centers": None,
+                        "duplicate_spike_ms": 0.25,
+                        "position_limit": 100
+                    },
                    'extractor' : se.KiloSortSortingExtractor,
-                    'path' : 'sorter_output'
+                   'path' : 'sorter_output'
                    },
     
     'mountainsort4' : {'surname' : "MS4",
@@ -116,6 +149,22 @@ sorter_dict = {
                                    },
                        'extractor' : si.read_npz_sorting  # se.MdaSortingExtractor
                        },
+    'spykingcircus' : {'surname' : "SC",
+                       'docker_image' : "spikeinterface/spyking-circus-base:latest",
+                          'params' : { 
+                            "detect_sign": -1,  # -1 - 1 - 0
+                            "adjacency_radius": 100,  # Channel neighborhood adjacency radius corresponding to geom file
+                            "detect_threshold": 6,  # Threshold for detection
+                            "template_width_ms": 3,  # Spyking circus parameter
+                            "filter": True,
+                            "merge_spikes": True,
+                            "auto_merge": 0.75,
+                            "num_workers": None,
+                            "whitening_max_elts": 1000,  # I believe it relates to subsampling and affects compute time
+                            "clustering_max_elts": 10000,  # I believe it relates to subsampling and affects compute time
+                                    },
+                          'extractor' : se.SpykingCircusSortingExtractor
+                        },
                        
     'spykingcircus2' : {'surname' : "SC2",
                         'docker_image' : None,
@@ -123,7 +172,7 @@ sorter_dict = {
                                     "general": {"ms_before": 2, "ms_after": 2, "radius_um": 100},
                                     "sparsity": {"method": "ptp", "threshold": 0.25},
                                     "filtering": {"freq_min": 150},
-                                    "detection": {"peak_sign": "both", "detect_threshold": 4},
+                                    "detection": {"peak_sign": "neg", "detect_threshold": 4},
                                     "selection": {
                                         "method": "smart_sampling_amplitudes",
                                         "n_peaks_per_channel": 5000,

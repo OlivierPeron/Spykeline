@@ -137,3 +137,21 @@ Select your probe's model among the listed ones.
 >[!TIP]
 >Once the brand and the model selected, if you are unsure about it, you can click the "Display" button and the selected probe is shown such as:
 ><p align="center"><img src="./docs/ProbeGUI_displayed.png" alt="ProbeGUI_displayed" /></p>
+
+## Architecture
+
+This option is to be used if you are using a linear probe. For linear probe, the preprocessing doesn't happen by shank as per default, but by radius. For example, the common median reference will take all the channels within the radius of the channel of interest, while it would just take all channel from a shank as default.
+
+## Engine
+
+There are 2 implemented ways to run a sorter: locally or using Docker. 
+Locally means that one need to install the sorter in the environment, with all the correct package versions and sometimes even a specific MATLAB version is required, which could be a hassle. 
+The other solution is using Docker, that will launch the sorter in a pre-created environment (Image). It requires to have Docker properly installed on the computer, but once this is done, it is easy to use a large variety of sorter.
+
+## Sorter
+
+According to the engine you selected, different sorter are going to be displayed :
+  - **Local**: will show you all the sorters installed on the computer
+  - **Docker**: will show you all the sorters for which the configuration is done in [spikesorting/sorter_params](./spikesorting/sorter_params.py). As all (or almost) sorters are available on docker, the sub-selection depends on weither they are configurated inside spykeline.
+
+The sorters' parameters can be accessed and modified in [spikesorting/sorter_params](./spikesorting/sorter_params.py).

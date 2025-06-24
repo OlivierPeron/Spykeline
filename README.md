@@ -27,13 +27,13 @@ Spike sorting pipeline
 
 1. Install [Anaconda](https://www.anaconda.com/download)
 2. Open Anaconda prompt 
-3. Create a new environment with `conda create --name spykeline python=3.9`.
-4. Activate it `conda activate spykeline`.
-5. Install **Git**, you can download it [here](https://git-scm.com/download/win), you can check the installation, by running `git --version` from Anaconda prompt, or any terminal.
-6. Clone **Spykeline** repository locally, you can follow instructions [here](https://docs.github.com/fr/repositories/creating-and-managing-repositories/cloning-a-repository).
-7. From the terminal, access the location of the cloned repository `cd /path/to/Spykeline`.
-8. Install it `pip install .`.
-9. Exit the folder `cd ..`.
+3. Create a new environment with `conda create --name spykeline python=3.9`
+4. Activate it `conda activate spykeline`
+5. Install **Git**, you can download it [here](https://git-scm.com/download/win), you can check the installation, by running `git --version` from Anaconda prompt, or any terminal
+6. Clone **Spykeline** repository locally, you can follow instructions [here](https://docs.github.com/fr/repositories/creating-and-managing-repositories/cloning-a-repository)
+7. From the terminal, access the location of the cloned repository `cd /path/to/Spykeline`
+8. Install it `pip install .`
+9. Exit the folder `cd ..`
 
 The next 2 steps are optional as they depend on the sorter you choose to use (GPU/~GPU~ or Docker/~Docker~). You can find a list of available sorters on the [spikeinterface website](https://spikeinterface.readthedocs.io/en/stable/modules/sorters.html#). depending on the sorter you choose, you should check its GitHub repository for specific requirements. 
 
@@ -44,13 +44,15 @@ The next 2 steps are optional as they depend on the sorter you choose to use (GP
 
 #### Docker
 
-Docker is used to run most sorters in a Virtual environment. If you don't have it yet installed, [download it](https://www.docker.com/), and follow the [installation instructions](https://docs.docker.com/desktop/install/windows-install/). 
+Docker is used to run most sorters in a Virtual environment. It is not necessarly required but If you don't have it yet installed, running some sorters could be troublesome. Follow this link to [download it](https://www.docker.com/), and follow the [installation instructions](https://docs.docker.com/desktop/install/windows-install/). 
 
 #### GPU requirements
 
-If not installed yet, install the NVIDIA driver corresponding to your GPU ([here](https://www.nvidia.com/Download/index.aspx?lang=en-us)). To access GPU information from the terminal, use `nvidia-smi`. You may also need to install the CUDA library, [CUDA 12.1](https://developer.nvidia.com/cuda-12-1-0-download-archive) recommended.
+- If not installed yet, install the NVIDIA driver corresponding to your GPU ([here](https://www.nvidia.com/Download/index.aspx?lang=en-us)). To access GPU information from the terminal, use `nvidia-smi`. You may also need to install the CUDA library, [CUDA 12.1](https://developer.nvidia.com/cuda-12-1-0-download-archive) recommended.
 
-Install pyTorch `pip install torch --index-url https://download.pytorch.org/whl/cu121` (torchvision and torchaudio were removed as there are not used here). More information [here](https://pytorch.org/get-started/locally/).
+- Install pyTorch `pip install torch --index-url https://download.pytorch.org/whl/cu121` (torchvision and torchaudio were removed as there are not used here). More information [here](https://pytorch.org/get-started/locally/).
+
+- Install Cupy, the version depends on the CUDA one, so to know which to install check the requirements [here](https://docs.cupy.dev/en/stable/install.html).
 
 
 ## Using Spykeline

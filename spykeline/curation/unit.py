@@ -8,13 +8,15 @@ class Unit:
                  unit_id,
                  nb_spikes,
                  main_ch,
-                 shank, 
+                 group, 
+                 probe,
                  mother = None):
         
         self.id = unit_id
         self.nb_spikes = nb_spikes
         self.main_ch = main_ch
-        self.shank = shank
+        self.group = group
+        self.probe = probe
         self.mother = mother
     
         self.label = None
@@ -76,6 +78,10 @@ class Unit:
         return [indices_list]
     
     def complete_from_channels(self):
+        """
+        Completes the unit's information (spike to remove or split out) from its channels.
+
+        """
 
         if 'mua' in [channel.label for channel in self.channels]:
             self.label = 'mua'
@@ -110,9 +116,6 @@ class Unit:
         self.center = _count.most_common(1)[0][0]
 
 
-
-
-
 class Channel(Unit):
     def __init__(self,
                  id, 
@@ -124,6 +127,8 @@ class Channel(Unit):
 
         self.label = None
         self.remove = None
+        self.split = None
+        self.threshold = None
         self.units = list()
 
         unit.add_channel(self)
