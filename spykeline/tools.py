@@ -1,5 +1,6 @@
 import os
 import json
+import shutil
 
 import numpy as np
 
@@ -125,41 +126,23 @@ def define_paths(base_folder, probe_dict, secondary_path = None):
         if spykeparams['general']['export_to_klusters']:
             paths['klusters'] = os.path.join(paths['output_folder'], 'Klusters')
     elif spykeparams['spikesorting']['pipeline'] == 'by_probe':
-        if spykeparams['general']['mode'] == 'single':
-            paths['Probe_0'] = {
-                    'base_folder' : paths['output_folder'],
-                    'metadata' : os.path.join(paths['output_folder'], 'Metadata'),
-                    'tmp' : os.path.join(paths['output_folder'], 'Tmp'),
-                    'preprocessing': os.path.join(paths['output_folder'], 'Preprocessing')
-                }
-            
+        for id, _ in enumerate(probe_dict):
+            paths[f'Probe_{id}'] = {
+                'base_folder' : os.path.join(paths['output_folder'], f'Probe_{id}'),
+                'metadata' : os.path.join(paths['output_folder'], f'Probe_{id}', 'Metadata'),
+                'tmp' : os.path.join(paths['output_folder'], f'Probe_{id}', 'Tmp'),
+                'preprocessing': os.path.join(paths['output_folder'], f'Probe_{id}', 'Preprocessing')
+            }
+
             if spykeparams['general']['do_curation']:
-                paths['Probe_0']['units'] = os.path.join(paths['Probe_0']['metadata'], 'Original_units.pkl')
-                paths['Probe_0']['units_final'] = os.path.join(paths['Probe_0']['metadata'], 'Final_units.pkl')
+                paths[f'Probe_{id}']['units'] = os.path.join(paths[f'Probe_{id}']['metadata'], 'Original_units.pkl')
+                paths[f'Probe_{id}']['units_final'] = os.path.join(paths[f'Probe_{id}']['metadata'], 'Final_units.pkl')
 
             if spykeparams['general']['export_to_phy']:
-                paths['Probe_0']['phy'] = os.path.join(paths['Probe_0']['base_folder'], 'Phy')
+                paths[f'Probe_{id}']['phy'] = os.path.join(paths[f'Probe_{id}']['base_folder'], 'Phy')
 
             if spykeparams['general']['export_to_klusters']:
-                paths['Probe_0']['klusters'] = os.path.join(paths['Probe_0']['base_folder'], 'Klusters')
-        else:
-            for id, _ in enumerate(probe_dict):
-                paths[f'Probe_{id}'] = {
-                    'base_folder' : os.path.join(paths['output_folder'], f'Probe_{id}'),
-                    'metadata' : os.path.join(paths['output_folder'], f'Probe_{id}', 'Metadata'),
-                    'tmp' : os.path.join(paths['output_folder'], f'Probe_{id}', 'Tmp'),
-                    'preprocessing': os.path.join(paths['output_folder'], f'Probe_{id}', 'Preprocessing')
-                }
-
-                if spykeparams['general']['do_curation']:
-                    paths[f'Probe_{id}']['units'] = os.path.join(paths[f'Probe_{id}']['metadata'], 'Original_units.pkl')
-                    paths[f'Probe_{id}']['units_final'] = os.path.join(paths[f'Probe_{id}']['metadata'], 'Final_units.pkl')
-
-                if spykeparams['general']['export_to_phy']:
-                    paths[f'Probe_{id}']['phy'] = os.path.join(paths[f'Probe_{id}']['base_folder'], 'Phy')
-
-                if spykeparams['general']['export_to_klusters']:
-                    paths[f'Probe_{id}']['klusters'] = os.path.join(paths[f'Probe_{id}']['base_folder'], 'Klusters')
+                paths[f'Probe_{id}']['klusters'] = os.path.join(paths[f'Probe_{id}']['base_folder'], 'Klusters')
 
     return paths
 
@@ -1000,3 +983,23 @@ def export_results(data, paths, units, metadata):
                 klusters_export(data[probe_id],
                                 paths[f'Probe_{probe_id}'],
                                 units[probe_id])
+
+def delete_temp_files(paths, metadata):
+    """
+    Delete the temporary files created during the process.
+
+    Parameters
+    ----------
+    paths : dict
+        Contains all required paths.
+    """
+    from . import spykeparams
+
+    if spykeparams['general']['pipeline'] == 'all':
+        shutil.rmtree(paths['tmp'])
+    else:
+        for probe_id, _ in metadata['Probes'].items():
+            if os.path.exists(paths[f'Probe_{probe_id}']['tmp']):
+                shutil.rmtree(paths[f'Probe_{probe_id}']['tmp'])
+            else:
+                print(f"Temporary folder for Probe {probe_id} does not exist, skipping deletion.")

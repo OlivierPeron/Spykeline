@@ -104,23 +104,8 @@ class SpykelineGUI:
 
     def toggle_frame(self, var, frame, resize=False):
 
-        var_map = {
-            'spiksort': self.var_spiksort,
-            'cur': self.var_cur
-        }
-
         if isinstance(var, BooleanVar):
             if var.get():
-                frame.grid()
-            else:
-                frame.grid_remove()
-        elif isinstance(var, dict):
-            grid = True
-            for key, value in var.items():
-                if var_map[key].get() != value:
-                    grid = False
-                
-            if grid:
                 frame.grid()
             else:
                 frame.grid_remove()
@@ -228,6 +213,7 @@ class SpykelineGUI:
             running_mode = 'single'
         else:
             running_mode = 'multiple'
+
         # Collect values from GUI widgets
         self.params['general'] = {
             'plot_probe': self.var_plot.get(),
@@ -261,6 +247,9 @@ class SpykelineGUI:
             'recursive': self.var_recursive.get(),
             'remove_noise_units': self.var_noise.get(),
         }
+
+        if self.params['spikesorting']['pipeline'] == 'by_probe' and running_mode == 'single':
+            self.params['spikesorting']['pipeline'] = 'all'
 
         self.input_path = self.ent_ipath.get() 
         if self.params['general']['secondary_path']:
@@ -459,13 +448,13 @@ class SpykelineGUI:
         self.btn_spiksort = Checkbutton(self.frm_paths, 
                                         text="Spikesorting", 
                                         variable=self.var_spiksort,
-                                        command=lambda: self.toggle_frame({'spiksort': False, 'cur': True}, self.frm_skipspiksort, resize=True))
+                                        command=lambda: self.toggle_frame((not self.var_spiksort), self.frm_skipspiksort, resize=True))
         self.btn_spiksort.grid(row=2, column=0, columnspan=2, padx=self.padx, pady=self.pady)
 
         self.btn_curat = Checkbutton(self.frm_paths, 
                                      text="Curation",
                                      variable=self.var_cur,
-                                     command=lambda: self.toggle_frame({'spiksort': False, 'cur': True}, self.frm_skipspiksort, resize=True))
+                                     command=lambda: self.toggle_frame(self.var_cur, self.frm_cur, resize=True))
         self.btn_curat.grid(row=2, column=1, columnspan=2, padx=self.padx, pady=self.pady)
 
         self.btn_cpath = Button(self.frm_paths, text='Check paths', command=lambda: self.check_paths())

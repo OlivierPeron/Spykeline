@@ -5,7 +5,7 @@ import shutil
 
 from . import set_spykeparams
 from .GUI import SpykelineGUI
-from .tools import define_paths, load_data, convert_json_compatible, open_sorting, export_results
+from .tools import define_paths, load_data, convert_json_compatible, open_sorting, export_results, delete_temp_files
 from .preprocessing.preprocess import run_preprocessing
 from .spikesorting.sorting import run_sorting
 from .curation.curate import run_curation
@@ -40,7 +40,7 @@ def run_spykeline(input_path, secondary_path, spykeparams, probe_dict):
 
     # SpikeSorting
     if spykeparams['general']['do_spikesort']:
-        print("Running SpikeSorting...")
+        print("Starting SpikeSorting...")
         data = run_sorting(
             pp_recording, 
             paths, 
@@ -77,15 +77,12 @@ def run_spykeline(input_path, secondary_path, spykeparams, probe_dict):
         json.dump(spykeparams, f, default=convert_json_compatible)
 
     # Exporting the results
-    export_results(curated_data, paths, units, metadata)
+    export_results(curated_data,
+                   paths,
+                   units,
+                   metadata)
 
-    # Cleaning the tmp folder
-    try:
-        for probe_id, _ in probe_dict.items():
-            shutil.rmtree(paths[f'Probe_{probe_id}']['tmp'])
-        print('Everything went well!')
-    except Exception as e:
-        print(f"An error occurred: {e}")
+    delete_temp_files(paths, metadata)
 
     print(f'\nTo check your results, access the folder: \n\n\t{paths["output_folder"]} \n\nClosing Spykeline...')
 

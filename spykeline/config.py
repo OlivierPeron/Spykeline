@@ -16,8 +16,7 @@ default_parameters = {
         "do_spikesort": True,
         "do_curation": False,
         "export_to_phy": False,
-        "export_to_klusters": False,
-        "mode": 'single' # or 'multiple', depending on the number of probes
+        "export_to_klusters": False
     },
     "preprocessing": {
         "filter": {
