@@ -238,7 +238,7 @@ class SpykelineGUI:
             'whiten': False
         }
         self.params['spikesorting'] = {
-            'folder:': self.ent_sort_path.get().strip(),
+            'folder': self.ent_sort_path.get().strip(),
             'execution_mode': self.var_EM.get().strip(),
             'sorter': self.var_sorter.get().strip(),
             'pipeline': self.pipeline.get().strip()
@@ -318,7 +318,7 @@ class SpykelineGUI:
                 anat = metadata['Anatomical_groups'][:-1]
         else:
             rhd_path = os.path.join(paths['Input Path'], 'info.rhd')
-            assert os.path.exists(rhd_path), "No xml file was found in the given in the input path"
+            assert os.path.exists(rhd_path), "No rhd file was found in the given in the input path"
             intan_info = read_rhd(rhd_path)
             anat = intan_info['Probe_channels']
 
@@ -445,10 +445,10 @@ class SpykelineGUI:
         self.lbl_opt_sorter.grid(row=0, column=3, sticky='e', padx=self.padx, pady=self.pady)
         self.opm_opt_sorter.grid(row=0, column=4, sticky='e', padx=self.padx, pady=self.pady)
 
-        self.btn_spiksort = Checkbutton(self.frm_paths, 
-                                        text="Spikesorting", 
+        self.btn_spiksort = Checkbutton(self.frm_paths,
+                                        text="Spikesorting",
                                         variable=self.var_spiksort,
-                                        command=lambda: self.toggle_frame((not self.var_spiksort), self.frm_skipspiksort, resize=True))
+                                        command=lambda: self.toggle_frame(BooleanVar(value=not self.var_spiksort.get()), self.frm_skipspiksort, resize=True))
         self.btn_spiksort.grid(row=2, column=0, columnspan=2, padx=self.padx, pady=self.pady)
 
         self.btn_curat = Checkbutton(self.frm_paths, 
